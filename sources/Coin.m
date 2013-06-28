@@ -15,6 +15,7 @@
 
 @synthesize emitter=emitter_;
 @synthesize bouncing = _bouncing;
+@synthesize isDead = _isDead;
 
 // -----------------------------------------------------------------------------------
 - (id) init
@@ -22,9 +23,19 @@
     if( (self=[super init]) )
     {
         _bouncing = NO;
+        _isDead = NO;
     }
     return (self);
 }
+
+
+- (void) didLoadFromCCB
+{
+    // Setup a delegate method for the animationManager of the explosion
+    CCBAnimationManager* animationManager = self.userObject;
+    animationManager.delegate = self;
+}
+
 
 // -----------------------------------------------------------------------------------
 - (void) showNextFrame
@@ -52,16 +63,22 @@
 {
     [[[GameInfoGlobal sharedGameInfoGlobal].statsContainer at:COIN_STATS] tick];
 
-    if ([GameLayer sharedGameLayer].isDebugMode == YES)
-        return;
+    if (!_isDead)
+    {
+        if ([GameLayer sharedGameLayer].isDebugMode == YES)
+            return;
+        
+        _isDead = YES;
+        
+        [self.animationManager runAnimationsForSequenceNamed:@"Die"];
+        
+        // increment score
+        [GameInfoGlobal sharedGameInfoGlobal].numCoinsThisLife++;
+        [[GameLayer sharedGameLayer].score incrementScore:1];
+        [GameInfoGlobal sharedGameInfoGlobal].coinsThisScratch++;
+        [[SimpleAudioEngine sharedEngine] playEffect:@"pickup_coin.wav"];
+    }
     
-    [self recycleObjectWithUsedPool:[GameLayer sharedGameLayer].coinUsedPool
-                           freePool:[GameLayer sharedGameLayer].coinFreePool];
-    // increment score
-    [GameInfoGlobal sharedGameInfoGlobal].numCoinsThisLife++;
-    [[GameLayer sharedGameLayer].score incrementScore:1];
-    [GameInfoGlobal sharedGameInfoGlobal].coinsThisScratch++;
-    [[SimpleAudioEngine sharedEngine] playEffect:@"pickup_coin.wav"];
 }
 
 // -----------------------------------------------------------------------------------
@@ -92,7 +109,22 @@
 // -----------------------------------------------------------------------------------
 - (void) resetObject
 {
+    _isDead = NO;
     [super resetObject];
+}
+
+- (void) completedAnimationSequenceNamed:(NSString *)name
+{
+    
+    if (_isDead)
+    {
+        [self recycleObjectWithUsedPool:[GameLayer sharedGameLayer].coinUsedPool                  freePool:[GameLayer sharedGameLayer].coinFreePool];
+        
+
+    }
+    
+    //    [[GameLayer sharedGameLayer] unschedule:@selector(update:)];
+    //    [[CCDirector sharedDirector] pause];
 }
 
 @end

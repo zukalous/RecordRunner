@@ -29,6 +29,7 @@
 
 }
 
+//This restarts the game and starts a new one.
 - (void) pressedYES:(id) sender
 {
     self.isQuitting = NO;
